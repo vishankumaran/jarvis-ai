@@ -1,0 +1,97 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#050b16">
+  <title>JARVIS AI</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-icon">J</div>
+        <div>
+          <h1>J.A.R.V.I.S</h1>
+          <p>PERSONAL AI ASSISTANT</p>
+        </div>
+      </div>
+      <span class="status"><i></i> ONLINE UI</span>
+    </header>
+
+    <section class="hero">
+      <p class="eyebrow">YOUR PERSONAL ASSISTANT</p>
+      <h2>At your service.</h2>
+      <p class="subtitle">
+        Your world. Your commands. Your JARVIS.
+      </p>
+
+      <div class="reactor" id="reactor">
+        <div class="orbit orbit-one"></div>
+        <div class="orbit orbit-two"></div>
+        <div class="orbit orbit-three"></div>
+        <div class="core"><span>J</span></div>
+      </div>
+
+      <p id="statusText" class="status-text">Systems ready</p>
+      <button id="micButton" class="mic-button" type="button">
+        <span>🎙</span> TALK TO JARVIS
+      </button>
+      <p class="hint">Tap the button and speak</p>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <h3>Conversation</h3>
+        <button id="clearButton" class="text-button" type="button">
+          Clear
+        </button>
+      </div>
+      <div id="chat" class="chat" aria-live="polite">
+        <div class="message jarvis-message">
+          <span class="message-label">JARVIS</span>
+          Hello! I'm JARVIS. Tap the microphone and say hello.
+          <small>Ready to assist</small>
+        </div>
+      </div>
+      <form id="chatForm" class="chat-form">
+        <input
+          id="messageInput"
+          type="text"
+          placeholder="Type your command..."
+          autocomplete="off"
+          aria-label="Type your message"
+        >
+        <button type="submit" aria-label="Send message">➤</button>
+      </form>
+    </section>
+
+    <section class="quick-actions">
+      <h3>Quick commands</h3>
+      <div class="action-grid">
+        <button type="button" data-command="What time is it?">
+          <span>◷</span> Time
+        </button>
+        <button type="button" data-command="Tell me a fun fact">
+          <span>✧</span> Fun fact
+        </button>
+        <button type="button" data-command="Help me learn English">
+          <span>文</span> Learn English
+        </button>
+        <button type="button" data-command="Say hello in Tamil">
+          <span>அ</span> Tamil
+        </button>
+      </div>
+    </section>
+
+    <footer>
+      <span>JARVIS • PERSONAL PROJECT</span>
+      <span>VOICE · INTELLIGENCE · CONTROL</span>
+    </footer>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
