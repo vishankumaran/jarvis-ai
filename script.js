@@ -1,369 +1,235 @@
 
 "use strict";
 
-// ==========================================
-// JARVIS AI ASSISTANT
-// Cloudflare Worker + OpenAI API
-// ==========================================
-
+// Your Cloudflare Worker endpoint.
+// Never put your OpenAI API key in this file.
 const API_URL =
   "https://jarvis-ai-backend.kumaranvishan.workers.dev/chat";
 
-// HTML elements
 const micButton = document.getElementById("micButton");
 const statusText = document.getElementById("statusText");
-const reactor = document.getElementById("reactor");
 const chat = document.getElementById("chat");
 const chatForm = document.getElementById("chatForm");
 const messageInput = document.getElementById("messageInput");
+const sendButton = document.getElementById("sendButton");
 const clearButton = document.getElementById("clearButton");
 
-// App state
 let recognition = null;
 let isListening = false;
 let isBusy = false;
-let currentLanguage = "en-IN";
 
-// ==========================================
-// STATUS
-// ==========================================
-
-function setStatus(message, listening = false) {
+function setStatus(message) {
   statusText.textContent = message;
-  reactor.classList.toggle("listening", listening);
 }
 
-// ==========================================
-// CHAT MESSAGES
-// ==========================================
+function addMessage(text, sender = "assistant") {
+  const row = document.createElement("div");
+  row.className =
+    sender === "user"
+      ? "message user-message"
+      : "message assistant-message";
 
-function addMessage(sender, message) {
+  const avatar = document.createElement("div");
+  avatar.className = "avatar";
+  avatar.textContent = sender === "user" ? "Y" : "J";
+
   const bubble = document.createElement("div");
+  bubble.className = "bubble";
+  bubble.textContent = text;
 
-  bubble.className =
-    sender === "JARVIS"
-      ? "message jarvis-message"
-      : "message user-message";
-
-  const label = document.createElement("span");
-  label.className = "message-label";
-  label.textContent = sender;
-
-  const content = document.createElement("div");
-  content.textContent = message;
-
-  bubble.appendChild(label);
-  bubble.appendChild(content);
-
-  chat.appendChild(bubble);
+  row.append(avatar, bubble);
+  chat.appendChild(row);
   chat.scrollTop = chat.scrollHeight;
 }
 
-// ==========================================
-// LANGUAGE DETECTION FOR SPEECH
-// ==========================================
-
-function detectSpeechLanguage(text) {
-  // Tamil Unicode character range
-  if (/[\u0B80-\u0BFF]/.test(text)) {
-    return "ta-IN";
-  }
-
-  return "en-IN";
-}
-
-// ==========================================
-// SPEAK AI RESPONSE
-// ==========================================
-
-function speak(message) {
-  if (!("speechSynthesis" in window)) {
-    setStatus("Reply ready. Speech is unavailable.");
-    return;
-  }
+function speak(text) {
+  if (!("speechSynthesis" in window)) return;
 
   window.speechSynthesis.cancel();
 
-  const utterance = new SpeechSynthesisUtterance(message);
-
-  currentLanguage = detectSpeechLanguage(message);
-  utterance.lang = currentLanguage;
-  utterance.rate = 0.95;
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = 1;
   utterance.pitch = 1;
-
-  utterance.onstart = () => {
-    setStatus("JARVIS is speaking...");
-  };
-
-  utterance.onend = () => {
-    setStatus("Systems ready");
-  };
-
-  utterance.onerror = () => {
-    setStatus("Reply displayed");
-  };
+  utterance.lang = "en-US";
 
   window.speechSynthesis.speak(utterance);
 }
 
-// ==========================================
-// CONNECT TO CLOUDFLARE AI BACKEND
-// ==========================================
+function getLocalReply(message) {
+  const text = message.toLowerCase().trim();
 
-async function handleCommand(rawMessage) {
-  const message = String(rawMessage || "").trim();
-
-  if (!message || isBusy) {
-    return;
+  if (/^(hi|hello|hey|vanakkam)\b/.test(text)) {
+    return "Hello! I'm JARVIS, your personal AI assistant. How can I help you?";
   }
 
-  addMessage("YOU", message);
+  if (text.includes("what time") || text === "time") {
+    return "The current time on your device is " +
+      new Date().toLocaleTimeString();
+  }
+
+  if (text.includes("today's date") ||
+      text.includes("what date") ||
+      text === "date") {
+    return "Today's date is " + new Date().toLocaleDateString();
+  }
+
+  if (text.includes("fun fact")) {
+    return "Fun fact: A day on Venus is longer than its year!";
+  }
+
+  if (text.includes("say hello in tamil") ||
+      text.includes("tamil greeting")) {
+    return "வணக்கம்! எப்படி இருக்கிறீர்கள்?";
+  }
+
+  if (text.includes("teach me one english word")) {
+    return 'English word: "Curious". It means wanting to learn or know something. Example: "I am curious about space."';
+  }
+
+  return null;
+}
+
+async function askAI(message) {
+  const response = await fetch(API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ message })
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(
+      data.error ||
+      `The AI server returned error ${response.status}.`
+    );
+  }
+
+  if (!data.reply) {
+    throw new Error("JARVIS received an empty reply from the server.");
+  }
+
+  return data.reply;
+}
+
+async function handleCommand(message) {
+  const cleanedMessage = message.trim();
+  if (!cleanedMessage || isBusy) return;
 
   isBusy = true;
+  sendButton.disabled = true;
   messageInput.disabled = true;
-  micButton.disabled = true;
 
+  addMessage(cleanedMessage, "user");
   setStatus("JARVIS is thinking...");
 
   try {
-    const response = await fetch(API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        message: message
-      })
-    });
+    // Simple commands work locally without calling the AI service.
+    const localReply = getLocalReply(cleanedMessage);
+    const reply = localReply || await askAI(cleanedMessage);
 
-    let data;
-
-    try {
-      data = await response.json();
-    } catch {
-      throw new Error(
-        "The backend returned an invalid response."
-      );
-    }
-
-    if (!response.ok) {
-      throw new Error(
-        data.error || `Request failed: ${response.status}`
-      );
-    }
-
-    if (
-      typeof data.reply !== "string" ||
-      data.reply.trim() === ""
-    ) {
-      throw new Error("The AI returned an empty reply.");
-    }
-
-    addMessage("JARVIS", data.reply);
-
-    speak(data.reply);
-
+    addMessage(reply, "assistant");
+    setStatus("JARVIS is ready");
+    speak(reply);
   } catch (error) {
-    console.error("JARVIS connection error:", error);
+    console.error("JARVIS request failed:", error);
 
     addMessage(
-      "JARVIS",
-      "I'm unable to connect to my AI service right now. " +
-      "Please check your internet connection and try again."
+      "Sorry bro, I couldn't reach the AI service. " +
+      (error.message || "Please try again."),
+      "assistant"
     );
 
-    setStatus("AI connection failed");
-
+    setStatus("Connection problem");
   } finally {
     isBusy = false;
+    sendButton.disabled = false;
     messageInput.disabled = false;
-    micButton.disabled = false;
     messageInput.focus();
   }
 }
 
-// ==========================================
-// VOICE RECOGNITION
-// ==========================================
+chatForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
 
+  const message = messageInput.value.trim();
+  if (!message || isBusy) return;
+
+  messageInput.value = "";
+  await handleCommand(message);
+});
+
+// Voice input is supported only in browsers that implement
+// the Web Speech API. Microphone permission may be required.
 const SpeechRecognition =
-  window.SpeechRecognition ||
-  window.webkitSpeechRecognition;
+  window.SpeechRecognition || window.webkitSpeechRecognition;
 
 if (SpeechRecognition) {
   recognition = new SpeechRecognition();
-
+  recognition.lang = "en-US";
   recognition.continuous = false;
   recognition.interimResults = false;
-  recognition.lang = currentLanguage;
-  recognition.maxAlternatives = 1;
 
   recognition.onstart = () => {
     isListening = true;
-
-    micButton.innerHTML =
-      "<span>🔴</span> LISTENING...";
-
-    setStatus("Listening — speak now", true);
+    micButton.classList.add("listening");
+    setStatus("Listening... speak now");
   };
 
   recognition.onresult = (event) => {
-    const result = event.results[0][0];
-    const transcript = result.transcript;
-
-    if (transcript && transcript.trim()) {
-      handleCommand(transcript);
-    }
+    const transcript = event.results[0][0].transcript;
+    messageInput.value = transcript;
+    handleCommand(transcript);
   };
 
   recognition.onerror = (event) => {
-    let message = "Voice input failed. Please try again.";
-
-    if (event.error === "not-allowed") {
-      message =
-        "Microphone permission denied. Allow microphone access in your browser.";
-    } else if (event.error === "no-speech") {
-      message =
-        "No speech detected. Tap the microphone and try again.";
-    } else if (event.error === "network") {
-      message =
-        "Speech recognition network error. Check your internet connection.";
-    } else if (event.error === "audio-capture") {
-      message =
-        "No microphone was detected.";
-    }
-
-    setStatus(message);
+    setStatus("Voice input error: " + event.error);
   };
 
   recognition.onend = () => {
     isListening = false;
+    micButton.classList.remove("listening");
 
-    micButton.innerHTML =
-      "<span>🎙</span> TALK TO JARVIS";
-
-    reactor.classList.remove("listening");
-
-    if (
-      statusText.textContent === "Listening — speak now"
-    ) {
-      setStatus("Systems ready");
-    }
+    if (!isBusy) setStatus("JARVIS is ready");
   };
-
 } else {
-  micButton.innerHTML =
-    "<span>⌨️</span> TYPE TO JARVIS";
-
-  setStatus(
-    "Voice recognition is unsupported here. You can type messages."
-  );
+  micButton.title =
+    "Voice input is not supported in this browser. Please type instead.";
 }
 
-// ==========================================
-// MICROPHONE BUTTON
-// ==========================================
-
 micButton.addEventListener("click", () => {
-  if (isBusy) {
-    setStatus("Please wait for JARVIS to finish.");
-    return;
-  }
-
   if (!recognition) {
-    messageInput.focus();
-    setStatus("Type your question below.");
+    setStatus("Voice input is not supported here. Please type your message.");
     return;
   }
 
   if (isListening) {
     recognition.stop();
-    return;
-  }
-
-  try {
-    if ("speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
+  } else if (!isBusy) {
+    try {
+      recognition.start();
+    } catch (error) {
+      setStatus("Please wait a moment and try the microphone again.");
     }
-
-    recognition.lang = currentLanguage;
-    recognition.start();
-
-  } catch (error) {
-    console.error("Microphone start error:", error);
-
-    setStatus(
-      "Unable to start microphone. Please try again."
-    );
   }
 });
-
-// ==========================================
-// SEND TYPED MESSAGE
-// ==========================================
-
-chatForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-
-  const message = messageInput.value.trim();
-
-  if (!message || isBusy) {
-    return;
-  }
-
-  messageInput.value = "";
-  handleCommand(message);
-});
-
-// ==========================================
-// QUICK COMMANDS
-// ==========================================
 
 document.querySelectorAll("[data-command]").forEach((button) => {
   button.addEventListener("click", () => {
-    if (isBusy) {
-      return;
-    }
-
-    const command = button.dataset.command;
-
-    if (command) {
-      handleCommand(command);
-    }
+    handleCommand(button.dataset.command);
   });
 });
 
-// ==========================================
-// CLEAR CHAT
-// ==========================================
-
 clearButton.addEventListener("click", () => {
-  if (isBusy) {
-    return;
-  }
+  chat.replaceChildren();
+  addMessage("Chat cleared. What would you like to do next?");
+  setStatus("JARVIS is ready");
 
   if ("speechSynthesis" in window) {
     window.speechSynthesis.cancel();
   }
-
-  if (isListening && recognition) {
-    recognition.stop();
-  }
-
-  chat.replaceChildren();
-
-  addMessage(
-    "JARVIS",
-    "Conversation cleared. How can I help you?"
-  );
-
-  setStatus("Systems ready");
 });
 
-// ==========================================
-// INITIALIZE JARVIS
-// ==========================================
-
-setStatus("Systems ready");
-
-console.log("JARVIS AI interface initialized.");
+setStatus("JARVIS is ready");
