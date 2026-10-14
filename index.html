@@ -3,10 +3,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#050b16">
-  <title>JARVIS AI</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#050b18">
+  <title>JARVIS AI Assistant</title>
   <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
 </head>
 <body>
   <main class="app">
@@ -14,84 +15,75 @@
       <div class="brand">
         <div class="brand-icon">J</div>
         <div>
-          <h1>J.A.R.V.I.S</h1>
+          <h1>JARVIS</h1>
           <p>PERSONAL AI ASSISTANT</p>
         </div>
       </div>
-      <span class="status"><i></i> ONLINE UI</span>
+      <span class="online"><span></span> ONLINE</span>
     </header>
 
     <section class="hero">
-      <p class="eyebrow">YOUR PERSONAL ASSISTANT</p>
+      <p class="eyebrow">YOUR PERSONAL INTELLIGENCE</p>
       <h2>At your service.</h2>
-      <p class="subtitle">
-        Your world. Your commands. Your JARVIS.
-      </p>
+      <p class="subtitle">Ask anything. Learn anything. Let's get started.</p>
 
-      <div class="reactor" id="reactor">
-        <div class="orbit orbit-one"></div>
-        <div class="orbit orbit-two"></div>
-        <div class="orbit orbit-three"></div>
-        <div class="core"><span>J</span></div>
-      </div>
-
-      <p id="statusText" class="status-text">Systems ready</p>
-      <button id="micButton" class="mic-button" type="button">
-        <span>🎙</span> TALK TO JARVIS
-      </button>
-      <p class="hint">Tap the button and speak</p>
-    </section>
-
-    <section class="panel">
-      <div class="panel-heading">
-        <h3>Conversation</h3>
-        <button id="clearButton" class="text-button" type="button">
-          Clear
+      <div class="reactor-wrap">
+        <div class="reactor-ring ring-one"></div>
+        <div class="reactor-ring ring-two"></div>
+        <div class="reactor-ring ring-three"></div>
+        <button id="micButton" class="reactor" type="button"
+          aria-label="Start voice input">
+          <span class="reactor-core">J</span>
         </button>
       </div>
+
+      <p id="statusText" class="status">JARVIS is ready</p>
+      <p class="voice-hint">Tap the reactor to speak</p>
+    </section>
+
+    <section class="quick-actions">
+      <button type="button" data-command="Tell me a fun fact">✨ Fun fact</button>
+      <button type="button" data-command="What time is it?">🕒 Time</button>
+      <button type="button" data-command="Teach me one English word">📚 Learn</button>
+      <button type="button" data-command="Say hello in Tamil">🌏 Tamil</button>
+    </section>
+
+    <section class="chat-panel">
+      <div class="chat-heading">
+        <div>
+          <h2>Conversation</h2>
+          <p>Chat with your AI assistant</p>
+        </div>
+        <button id="clearButton" class="clear-button" type="button">
+          Clear chat
+        </button>
+      </div>
+
       <div id="chat" class="chat" aria-live="polite">
-        <div class="message jarvis-message">
-          <span class="message-label">JARVIS</span>
-          Hello! I'm JARVIS. Tap the microphone and say hello.
-          <small>Ready to assist</small>
+        <div class="message assistant-message">
+          <div class="avatar">J</div>
+          <div class="bubble">
+            Hello! I'm JARVIS, your personal AI assistant. What can I help you with?
+          </div>
         </div>
       </div>
+
       <form id="chatForm" class="chat-form">
         <input
           id="messageInput"
           type="text"
-          placeholder="Type your command..."
+          placeholder="Ask JARVIS anything..."
           autocomplete="off"
-          aria-label="Type your message"
+          maxlength="4000"
+          aria-label="Your message"
+          required
         >
-        <button type="submit" aria-label="Send message">➤</button>
+        <button id="sendButton" type="submit" aria-label="Send message">
+          ➤
+        </button>
       </form>
+      <p class="footer-note">JARVIS AI · Your project, your control</p>
     </section>
-
-    <section class="quick-actions">
-      <h3>Quick commands</h3>
-      <div class="action-grid">
-        <button type="button" data-command="What time is it?">
-          <span>◷</span> Time
-        </button>
-        <button type="button" data-command="Tell me a fun fact">
-          <span>✧</span> Fun fact
-        </button>
-        <button type="button" data-command="Help me learn English">
-          <span>文</span> Learn English
-        </button>
-        <button type="button" data-command="Say hello in Tamil">
-          <span>அ</span> Tamil
-        </button>
-      </div>
-    </section>
-
-    <footer>
-      <span>JARVIS • PERSONAL PROJECT</span>
-      <span>VOICE · INTELLIGENCE · CONTROL</span>
-    </footer>
   </main>
-
-  <script src="script.js"></script>
 </body>
 </html>
