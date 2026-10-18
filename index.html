@@ -1,89 +1,200 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#050b18">
-  <title>JARVIS AI Assistant</title>
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#020605">
+  <meta name="description" content="JARVIS personal AI assistant">
+  <title>JARVIS — Your Personal AI</title>
   <link rel="stylesheet" href="style.css">
-  <script src="script.js" defer></script>
 </head>
+
 <body>
-  <main class="app">
+  <div class="ambient ambient-one"></div>
+  <div class="ambient ambient-two"></div>
+
+  <div class="app-shell">
+
     <header class="topbar">
+      <button class="icon-button" id="menuButton"
+              aria-label="Open menu">☰</button>
+
       <div class="brand">
-        <div class="brand-icon">J</div>
-        <div>
-          <h1>JARVIS</h1>
-          <p>PERSONAL AI ASSISTANT</p>
-        </div>
+        <div class="brand-title">JARVIS<span class="brand-dot">.</span></div>
+        <div class="brand-subtitle">YOUR PERSONAL AI ASSISTANT</div>
       </div>
-      <span class="online"><span></span> ONLINE</span>
+
+      <button class="mode-pill" id="modeButton">
+        <span>◉</span>
+        <span><small>AI MODE</small><strong>HYBRID</strong></span>
+      </button>
+
+      <button class="icon-button settings-button" id="settingsButton"
+              aria-label="Settings">⚙</button>
     </header>
 
-    <section class="hero">
-      <p class="eyebrow">YOUR PERSONAL INTELLIGENCE</p>
-      <h2>At your service.</h2>
-      <p class="subtitle">Ask anything. Learn anything. Let's get started.</p>
+    <main>
+      <section class="hero-panel">
 
-      <div class="reactor-wrap">
-        <div class="reactor-ring ring-one"></div>
-        <div class="reactor-ring ring-two"></div>
-        <div class="reactor-ring ring-three"></div>
-        <button id="micButton" class="reactor" type="button"
-          aria-label="Start voice input">
-          <span class="reactor-core">J</span>
-        </button>
-      </div>
+        <div class="side-column left-column">
+          <div class="info-card">
+            <span class="info-icon">♩</span>
+            <div><small>VOICE</small><strong id="voiceStatus">READY</strong></div>
+          </div>
 
-      <p id="statusText" class="status">JARVIS is ready</p>
-      <p class="voice-hint">Tap the reactor to speak</p>
-    </section>
+          <div class="info-card">
+            <span class="info-icon">⬟</span>
+            <div><small>SECURITY</small><strong>PROTECTED</strong></div>
+          </div>
 
-    <section class="quick-actions">
-      <button type="button" data-command="Tell me a fun fact">✨ Fun fact</button>
-      <button type="button" data-command="What time is it?">🕒 Time</button>
-      <button type="button" data-command="Teach me one English word">📚 Learn</button>
-      <button type="button" data-command="Say hello in Tamil">🌏 Tamil</button>
-    </section>
-
-    <section class="chat-panel">
-      <div class="chat-heading">
-        <div>
-          <h2>Conversation</h2>
-          <p>Chat with your AI assistant</p>
-        </div>
-        <button id="clearButton" class="clear-button" type="button">
-          Clear chat
-        </button>
-      </div>
-
-      <div id="chat" class="chat" aria-live="polite">
-        <div class="message assistant-message">
-          <div class="avatar">J</div>
-          <div class="bubble">
-            Hello! I'm JARVIS, your personal AI assistant. What can I help you with?
+          <div class="info-card">
+            <span class="info-icon">☁</span>
+            <div><small>PRIVACY</small><strong>BACKEND</strong></div>
           </div>
         </div>
+
+        <div class="reactor-area">
+          <div class="reactor">
+            <div class="reactor-ring ring-one"></div>
+            <div class="reactor-ring ring-two"></div>
+            <div class="reactor-ring ring-three"></div>
+            <div class="reactor-ring ring-four"></div>
+
+            <div class="core">
+              <div class="core-eye eye-left"></div>
+              <div class="core-eye eye-right"></div>
+              <div class="core-mouth"></div>
+            </div>
+          </div>
+
+          <h1>JARVIS</h1>
+          <div class="always">— ALWAYS WITH YOU —</div>
+        </div>
+
+        <div class="side-column right-column">
+          <div class="detail-card">
+            <span class="detail-icon">◎</span>
+            <div>
+              <small>MULTI-LANGUAGE</small>
+              <p>English / தமிழ் / Thunglish</p>
+              <select id="languageSelect" aria-label="Response language">
+                <option value="auto">Automatic</option>
+                <option value="en-IN">English</option>
+                <option value="ta-IN">தமிழ்</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="detail-card devices-card">
+            <small>YOUR DEVICES</small>
+            <div class="device-row">
+              <span>▯<small>Mobile</small></span>
+              <span>▯<small>Tablet</small></span>
+              <span>▱<small>PC</small></span>
+            </div>
+            <p class="device-note">Web interface</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="voice-section">
+        <div class="waveform" id="waveform" aria-hidden="true"></div>
+
+        <div class="listening-text" id="statusText" aria-live="polite">
+          JARVIS READY
+        </div>
+        <p class="instruction" id="instruction">
+          Tap the microphone and ask me anything
+        </p>
+
+        <button class="mic-button" id="micButton"
+                aria-label="Start voice input">
+          <span class="mic-halo"></span>
+          <svg viewBox="0 0 48 48" aria-hidden="true">
+            <rect x="18" y="5" width="12" height="25" rx="6"></rect>
+            <path d="M11 23a13 13 0 0 0 26 0"></path>
+            <path d="M24 36v7M17 43h14"></path>
+          </svg>
+        </button>
+
+        <div class="transcript" id="transcript">
+          Hello! I am JARVIS. How can I help you today?
+        </div>
+      </section>
+
+      <section class="chat-section" id="chatSection">
+        <div class="chat-heading">
+          <span>JARVIS CONVERSATION</span>
+          <button id="clearChatButton">CLEAR</button>
+        </div>
+        <div class="chat-messages" id="chatMessages" aria-live="polite">
+          <div class="message assistant-message">
+            <span class="message-label">JARVIS</span>
+            Hello! Tap the microphone or type a question below.
+          </div>
+        </div>
+      </section>
+
+      <section class="input-panel">
+        <input id="messageInput" type="text"
+               placeholder="Ask JARVIS anything..."
+               autocomplete="off" maxlength="4000">
+        <button id="sendButton" aria-label="Send message">➤</button>
+      </section>
+
+      <div class="quick-actions">
+        <button class="quick-card" data-prompt="Tell me something interesting">
+          <span>✧</span><strong>Ask Anything</strong><small>Explore answers</small>
+        </button>
+
+        <button class="quick-card" data-prompt="What can you help me do on my phone?">
+          <span>▯</span><strong>My Phone</strong><small>Device guidance</small>
+        </button>
+
+        <button class="quick-card" data-prompt="Help me understand my settings">
+          <span>⚙</span><strong>Settings</strong><small>Get guidance</small>
+        </button>
+
+        <button class="quick-card" data-prompt="Translate hello into Tamil">
+          <span>◎</span><strong>Translate</strong><small>Languages</small>
+        </button>
+
+        <button class="quick-card" data-prompt="Tell me your features">
+          <span>✳</span><strong>More</strong><small>Features</small>
+        </button>
       </div>
 
-      <form id="chatForm" class="chat-form">
-        <input
-          id="messageInput"
-          type="text"
-          placeholder="Ask JARVIS anything..."
-          autocomplete="off"
-          maxlength="4000"
-          aria-label="Your message"
-          required
-        >
-        <button id="sendButton" type="submit" aria-label="Send message">
-          ➤
-        </button>
-      </form>
-      <p class="footer-note">JARVIS AI · Your project, your control</p>
-    </section>
-  </main>
+      <div class="ready-indicator">
+        <span></span> JARVIS <b id="readyText">READY</b> <span></span>
+      </div>
+    </main>
+
+    <nav class="bottom-nav" aria-label="Main navigation">
+      <button class="nav-item active" data-page="home">
+        <span>⌂</span>Home
+      </button>
+      <button class="nav-item" data-page="tools">
+        <span>◇</span>Tools
+      </button>
+      <button class="nav-main" id="navMicButton" aria-label="Talk to JARVIS">
+        <span>➤</span>
+      </button>
+      <button class="nav-item" data-page="history">
+        <span>◷</span>History
+      </button>
+      <button class="nav-item" data-page="profile">
+        <span>♙</span>Profile
+      </button>
+    </nav>
+
+    <footer>
+      JARVIS WEB ASSISTANT · AI RESPONSES REQUIRE AN INTERNET CONNECTION
+    </footer>
+  </div>
+
+  <div class="toast" id="toast" role="status"></div>
+
+  <script src="script.js"></script>
 </body>
 </html>
