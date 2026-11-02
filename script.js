@@ -1,456 +1,875 @@
 "use strict";
 
-/*
- * JARVIS frontend
- * Cloudflare Worker handles AI requests.
- * Never put your OpenAI API key in this file.
- */
+/* ============================================
+   J.A.R.V.I.S. ADVANCED INTERACTION ENGINE
+   VERSION 2.0.0
+   ============================================ */
 
-const API_URL =
-  "https://jarvis-ai-backend.kumaranvishan.workers.dev/chat";
+const JARVIS = (() => {
 
-const $ = (id) => document.getElementById(id);
+  /* ==========================================
+     CONFIGURATION
+     ========================================== */
 
-const ui = {
-  mic: $("micButton"),
-  navMic: $("navMicButton"),
-  send: $("sendButton"),
-  input: $("messageInput"),
-  messages: $("chatMessages"),
-  transcript: $("transcript"),
-  status: $("statusText"),
-  instruction: $("instruction"),
-  voiceStatus: $("voiceStatus"),
-  ready: $("readyText"),
-  waveform: $("waveform"),
-  language: $("languageSelect"),
-  clear: $("clearChatButton"),
-  toast: $("toast")
-};
+  const CONFIG = {
+    name: "JARVIS",
+    language: "en-IN",
+    speechRate: 0.95,
+    speechPitch: 0.9,
+    maximumCommandLength: 1000,
+    typingDelay: 350,
+    storageKey: "jarvis_preferences_v2"
+  };
 
-let recognition = null;
-let isListening = false;
-let isBusy = false;
-let shouldSpeak = true;
-let toastTimer = null;
-let requestController = null;
+  /* ==========================================
+     DOM ELEMENTS
+     ========================================== */
 
-const conversation = [];
+  const elements = {
+    clock: document.getElementById("clock"),
+    date: document.getElementById("date"),
 
-/* Build the animated waveform once. */
-function buildWaveform() {
-  const count = window.innerWidth < 600 ? 65 : 100;
-  ui.waveform.replaceChildren();
+    input: document.getElementById("userInput"),
+    chat: document.getElementById("chatBox"),
 
-  for (let i = 0; i < count; i++) {
-    const bar = document.createElement("span");
-    const distance = Math.abs(i - (count - 1) / 2);
-    const height = Math.max(8, 58 - distance * 1.05);
+    send: document.getElementById("sendButton"),
+    microphone: document.getElementById("micButton"),
+    speak: document.getElementById("speakButton"),
+    stop: document.getElementById("stopButton"),
+    clear: document.getElementById("clearButton"),
 
-    bar.style.setProperty("--bar-height", `${height}px`);
-    bar.style.setProperty("--delay", `${(i % 13) * -0.09}s`);
+    reactor: document.getElementById("reactor"),
+    coreStatus: document.getElementById("coreStatus"),
 
-    ui.waveform.appendChild(bar);
+    systemStatus: document.getElementById("systemStatus"),
+
+    typing: document.getElementById("typingIndicator"),
+
+    voiceStatus: document.getElementById("voiceModuleStatus"),
+    aiStatus: document.getElementById("aiModuleStatus"),
+
+    settings: document.getElementById("settingsPanel"),
+    settingsButton: document.getElementById("settingsButton"),
+    closeSettings: document.getElementById("closeSettings"),
+    saveSettings: document.getElementById("saveSettings"),
+
+    voiceEnabled: document.getElementById("voiceEnabled"),
+    autoSpeak: document.getElementById("autoSpeak"),
+    soundEnabled: document.getElementById("soundEnabled"),
+
+    notification: document.getElementById("notification")
+  };
+
+  /* ==========================================
+     APPLICATION STATE
+     ========================================== */
+
+  const state = {
+    listening: false,
+    processing: false,
+    recognition: null,
+    recognitionSupported: false,
+    speechSupported: "speechSynthesis" in window,
+    lastResponse: "Hello Commander. I am ready.",
+    preferences: {
+      voiceEnabled: true,
+      autoSpeak: true,
+      soundEnabled: false
+    },
+    notificationTimer: null
+  };
+
+  /* ==========================================
+     STORAGE SYSTEM
+     ========================================== */
+
+  function loadPreferences() {
+    try {
+      const saved = localStorage.getItem(CONFIG.storageKey);
+
+      if (!saved) return;
+
+      const parsed = JSON.parse(saved);
+
+      if (!parsed || typeof parsed !== "object") return;
+
+      state.preferences = {
+        voiceEnabled: parsed.voiceEnabled !== false,
+        autoSpeak: parsed.autoSpeak !== false,
+        soundEnabled: parsed.soundEnabled === true
+      };
+
+    } catch (error) {
+      console.warn("JARVIS: Preferences unavailable.", error);
+    }
   }
-}
 
-buildWaveform();
+  function savePreferences() {
+    try {
+      localStorage.setItem(
+        CONFIG.storageKey,
+        JSON.stringify(state.preferences)
+      );
 
-let resizeTimer;
-window.addEventListener("resize", () => {
-  clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(buildWaveform, 200);
-});
+      return true;
 
-/* Status helpers */
-function setStatus(status, instruction) {
-  ui.status.textContent = status;
-  ui.instruction.textContent = instruction;
+    } catch (error) {
+      console.warn("JARVIS: Could not save preferences.", error);
+      return false;
+    }
+  }
 
-  document.body.classList.toggle("listening", status === "Listening...");
-  document.body.classList.toggle("speaking", status === "Speaking...");
+  function syncSettings() {
+    elements.voiceEnabled.checked =
+      state.preferences.voiceEnabled;
 
-  ui.voiceStatus.textContent =
-    status === "Listening..." ? "ACTIVE" :
-    status === "Speaking..." ? "SPEAKING" :
-    isBusy ? "THINKING" : "READY";
+    elements.autoSpeak.checked =
+      state.preferences.autoSpeak;
 
-  ui.ready.textContent = isBusy ? "THINKING" : "READY";
-}
+    elements.soundEnabled.checked =
+      state.preferences.soundEnabled;
+  }
 
-function showToast(message) {
-  ui.toast.textContent = message;
-  ui.toast.classList.add("visible");
+  /* ==========================================
+     NOTIFICATION SYSTEM
+     ========================================== */
 
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => {
-    ui.toast.classList.remove("visible");
-  }, 2800);
-}
+  function notify(message) {
+    elements.notification.textContent = message;
+    elements.notification.classList.add("show");
 
-function scrollMessages() {
-  ui.messages.scrollTop = ui.messages.scrollHeight;
-}
+    if (state.notificationTimer) {
+      clearTimeout(state.notificationTimer);
+    }
 
-/* Create safe chat elements using textContent, not HTML from AI. */
-function addMessage(role, text) {
-  const bubble = document.createElement("div");
-  bubble.className =
-    "message " + (role === "user" ? "user-message" : "assistant-message");
+    state.notificationTimer = setTimeout(() => {
+      elements.notification.classList.remove("show");
+    }, 2600);
+  }
 
-  const label = document.createElement("span");
-  label.className = "message-label";
-  label.textContent = role === "user" ? "YOU" : "JARVIS";
+  /* ==========================================
+     CLOCK ENGINE
+     ========================================== */
 
-  const content = document.createElement("div");
-  content.textContent = text;
+  function updateClock() {
+    const now = new Date();
 
-  bubble.append(label, content);
-  ui.messages.appendChild(bubble);
-  scrollMessages();
+    elements.clock.textContent =
+      now.toLocaleTimeString("en-IN", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true
+      });
 
-  return bubble;
-}
+    elements.date.textContent =
+      now.toLocaleDateString("en-IN", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric"
+      });
+  }
 
-function updateBubble(bubble, text) {
-  const content = bubble.querySelector("div");
-  if (content) content.textContent = text;
-}
+  /* ==========================================
+     INTERFACE STATUS
+     ========================================== */
 
-/* Speech output */
-function stopSpeaking() {
-  if ("speechSynthesis" in window) {
+  function setStatus(message) {
+    elements.coreStatus.textContent = message;
+  }
+
+  function setReactorMode(mode) {
+    elements.reactor.classList.remove(
+      "listening",
+      "processing"
+    );
+
+    if (mode === "listening") {
+      elements.reactor.classList.add("listening");
+    }
+
+    if (mode === "processing") {
+      elements.reactor.classList.add("processing");
+    }
+  }
+
+  /* ==========================================
+     CHAT SYSTEM
+     ========================================== */
+
+  function createMessage(message, sender) {
+    const row = document.createElement("div");
+
+    row.className =
+      sender === "user"
+        ? "chat-message user-message"
+        : "chat-message jarvis-message";
+
+    const avatar = document.createElement("div");
+    avatar.className = "avatar";
+
+    avatar.textContent =
+      sender === "user" ? "C" : "J";
+
+    const content = document.createElement("div");
+    content.className = "message-content";
+
+    const author = document.createElement("span");
+    author.className = "message-author";
+
+    author.textContent =
+      sender === "user" ? "COMMANDER" : "JARVIS SYSTEM";
+
+    const paragraph = document.createElement("p");
+    paragraph.textContent = message;
+
+    const time = document.createElement("time");
+
+    time.textContent = new Date().toLocaleTimeString(
+      "en-IN",
+      {
+        hour: "2-digit",
+        minute: "2-digit"
+      }
+    );
+
+    content.append(author, paragraph, time);
+    row.append(avatar, content);
+
+    elements.chat.appendChild(row);
+
+    elements.chat.scrollTop =
+      elements.chat.scrollHeight;
+  }
+
+  function clearChat() {
+    elements.chat.replaceChildren();
+
+    createMessage(
+      "Conversation cleared. I am ready for your next instruction, Commander.",
+      "jarvis"
+    );
+
+    state.lastResponse =
+      "Conversation cleared. Ready for your next instruction.";
+
+    stopSpeech();
+
+    setStatus("AWAITING COMMAND");
+  }
+
+  /* ==========================================
+     SPEECH OUTPUT
+     ========================================== */
+
+  function stopSpeech() {
+    if (!state.speechSupported) return;
+
     window.speechSynthesis.cancel();
   }
 
-  document.body.classList.remove("speaking");
-}
-
-function speak(text) {
-  if (!shouldSpeak || !("speechSynthesis" in window)) return;
-
-  stopSpeaking();
-
-  const utterance = new SpeechSynthesisUtterance(text);
-  const selectedLanguage = ui.language.value;
-
-  utterance.lang =
-    selectedLanguage === "auto" ? detectLanguage(text) : selectedLanguage;
-
-  utterance.rate = 1.03;
-  utterance.pitch = 1.0;
-  utterance.volume = 1.0;
-
-  utterance.onstart = () => {
-    document.body.classList.add("speaking");
-    ui.status.textContent = "Speaking...";
-    ui.instruction.textContent = "JARVIS is responding";
-  };
-
-  utterance.onend = () => {
-    document.body.classList.remove("speaking");
-    if (!isListening && !isBusy) {
-      setStatus("JARVIS READY", "Tap the microphone and ask me anything");
-    }
-  };
-
-  utterance.onerror = () => {
-    document.body.classList.remove("speaking");
-  };
-
-  window.speechSynthesis.speak(utterance);
-}
-
-function detectLanguage(text) {
-  if (/[\u0B80-\u0BFF]/.test(text)) return "ta-IN";
-  return "en-IN";
-}
-
-/* Browser voice recognition */
-function setupRecognition() {
-  const SpeechRecognition =
-    window.SpeechRecognition || window.webkitSpeechRecognition;
-
-  if (!SpeechRecognition) {
-    recognition = null;
-    ui.voiceStatus.textContent = "UNAVAILABLE";
-    return;
-  }
-
-  recognition = new SpeechRecognition();
-  recognition.continuous = false;
-  recognition.interimResults = true;
-  recognition.maxAlternatives = 1;
-
-  function applyRecognitionLanguage() {
-    recognition.lang =
-      ui.language.value === "auto" ? "en-IN" : ui.language.value;
-  }
-
-  applyRecognitionLanguage();
-
-  ui.language.addEventListener("change", applyRecognitionLanguage);
-
-  recognition.onstart = () => {
-    isListening = true;
-    stopSpeaking();
-    setStatus("Listening...", "I'm listening. Speak now.");
-    ui.mic.setAttribute("aria-label", "Stop listening");
-  };
-
-  recognition.onresult = (event) => {
-    let finalText = "";
-    let interimText = "";
-
-    for (let i = event.resultIndex; i < event.results.length; i++) {
-      const text = event.results[i][0].transcript;
-
-      if (event.results[i].isFinal) {
-        finalText += text;
-      } else {
-        interimText += text;
-      }
+  function speak(message) {
+    if (!state.preferences.voiceEnabled) {
+      notify("Voice responses are disabled.");
+      return;
     }
 
-    ui.transcript.textContent = finalText || interimText || "Listening...";
-
-    if (finalText.trim()) {
-      ui.input.value = finalText.trim();
+    if (!state.speechSupported) {
+      notify("Speech output is unavailable in this browser.");
+      return;
     }
-  };
 
-  recognition.onerror = (event) => {
-    const messages = {
-      "not-allowed": "Please allow microphone access in your browser.",
-      "audio-capture": "No microphone was found.",
-      "network": "Voice recognition needs an internet connection.",
-      "no-speech": "I didn't hear anything. Please try again."
+    stopSpeech();
+
+    const utterance =
+      new SpeechSynthesisUtterance(message);
+
+    utterance.lang = CONFIG.language;
+    utterance.rate = CONFIG.speechRate;
+    utterance.pitch = CONFIG.speechPitch;
+    utterance.volume = 1;
+
+    utterance.onstart = () => {
+      setStatus("VOICE OUTPUT ACTIVE");
     };
 
-    showToast(messages[event.error] || `Voice error: ${event.error}`);
-  };
+    utterance.onend = () => {
+      if (!state.listening && !state.processing) {
+        setStatus("AWAITING COMMAND");
+      }
+    };
 
-  recognition.onend = async () => {
-    isListening = false;
-    ui.mic.setAttribute("aria-label", "Start voice input");
+    utterance.onerror = (event) => {
+      console.warn("Speech output error:", event.error);
 
-    if (ui.input.value.trim()) {
-      const text = ui.input.value.trim();
-      ui.input.value = "";
-      await sendMessage(text);
-    } else {
-      setStatus("JARVIS READY", "Tap the microphone and ask me anything");
+      if (!state.listening && !state.processing) {
+        setStatus("AWAITING COMMAND");
+      }
+    };
+
+    window.speechSynthesis.speak(utterance);
+  }
+
+  /* ==========================================
+     COMMAND DATABASE
+     ========================================== */
+
+  function getLocalResponse(command) {
+
+    const text = command.toLowerCase().trim();
+
+    const now = new Date();
+
+    if (!text) {
+      return "Please provide a command, Commander.";
     }
-  };
-}
 
-setupRecognition();
+    // GREETING
 
-function startListening() {
-  if (isBusy) {
-    showToast("Please wait for the current answer.");
-    return;
+    if (
+      /\b(hello|hi|hey)\b/.test(text) ||
+      text.includes("good morning") ||
+      text.includes("good evening")
+    ) {
+      return "Greetings, Commander. All available local interface systems are ready.";
+    }
+
+    // IDENTITY
+
+    if (
+      text.includes("your name") ||
+      text.includes("who are you")
+    ) {
+      return "I am JARVIS, your personal artificial intelligence assistant project. My advanced intelligence modules are under development.";
+    }
+
+    // CREATOR
+
+    if (
+      text.includes("who created you") ||
+      text.includes("my creator")
+    ) {
+      return "I am being developed as your personal JARVIS assistant project.";
+    }
+
+    // TIME
+
+    if (
+      text.includes("time") &&
+      !text.includes("timer")
+    ) {
+      return "The current time is " +
+        now.toLocaleTimeString("en-IN");
+    }
+
+    // DATE
+
+    if (
+      text.includes("date") ||
+      text.includes("today")
+    ) {
+      return "Today's date is " +
+        now.toLocaleDateString("en-IN", {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+          year: "numeric"
+        });
+    }
+
+    // STATUS
+
+    if (
+      text.includes("status") ||
+      text.includes("system report")
+    ) {
+      return "The JARVIS interface is operational. The local command engine is active. Voice recognition support is " +
+        (state.recognitionSupported ? "available" : "unavailable") +
+        ". External artificial intelligence is not connected yet.";
+    }
+
+    // HELP
+
+    if (
+      text === "help" ||
+      text.includes("what can you do")
+    ) {
+      return "I can respond to greetings, provide the current time and date, explain my system status, and demonstrate local commands. External AI features will be connected in the next development phase.";
+    }
+
+    // STOP SPEAKING
+
+    if (
+      text.includes("stop speaking") ||
+      text.includes("stop talking")
+    ) {
+      stopSpeech();
+      return "Voice output stopped, Commander.";
+    }
+
+    // GREETING PERSONALITY
+
+    if (text.includes("how are you")) {
+      return "All available systems are functioning normally. Thank you for asking, Commander.";
+    }
+
+    // VERSION
+
+    if (text.includes("version")) {
+      return "You are currently using the JARVIS frontend version 2.0.";
+    }
+
+    // WEATHER NOTICE
+
+    if (text.includes("weather")) {
+      return "Live weather intelligence has not been connected yet. This feature will require an external weather service.";
+    }
+
+    // AI STATUS
+
+    if (text.includes("artificial intelligence")) {
+      return "My current local demonstration engine uses predefined commands. A real artificial intelligence API will be integrated securely through Cloudflare.";
+    }
+
+    // UNKNOWN COMMAND
+
+    return "Command received, Commander. I do not have an intelligent answer for that request yet. My external AI brain is waiting to be connected.";
+
   }
 
-  if (!recognition) {
-    showToast("Voice recognition isn't supported in this browser. Try typing.");
-    return;
-  }
+  /* ==========================================
+     PROCESS COMMAND
+     ========================================== */
 
-  if (isListening) {
-    recognition.stop();
-    return;
-  }
+  async function processCommand(command) {
 
-  stopSpeaking();
+    const cleanCommand = command
+      .trim()
+      .slice(0, CONFIG.maximumCommandLength);
 
-  try {
-    recognition.start();
-  } catch {
-    showToast("Microphone is busy. Please try again.");
-  }
-}
+    if (!cleanCommand || state.processing) {
+      return;
+    }
 
-/* Send a message to the Cloudflare Worker. */
-async function sendMessage(rawMessage) {
-  const message = String(rawMessage || "").trim();
+    if (
+      cleanCommand.toLowerCase() === "stop speaking" ||
+      cleanCommand.toLowerCase() === "stop talking"
+    ) {
+      stopSpeech();
+    }
 
-  if (!message || isBusy) return;
+    state.processing = true;
 
-  if (message.length > 4000) {
-    showToast("Please keep your message under 4000 characters.");
-    return;
-  }
+    createMessage(cleanCommand, "user");
 
-  stopSpeaking();
+    elements.typing.hidden = false;
 
-  addMessage("user", message);
-  ui.transcript.textContent = message;
+    setStatus("ANALYZING COMMAND");
+    setReactorMode("processing");
 
-  ui.input.value = "";
-  isBusy = true;
-  ui.send.disabled = true;
-  ui.ready.textContent = "THINKING";
-  ui.voiceStatus.textContent = "THINKING";
+    const response = getLocalResponse(cleanCommand);
 
-  setStatus("Thinking...", "JARVIS is preparing an answer");
+    state.lastResponse = response;
 
-  const pendingBubble = addMessage("assistant", "Connecting to JARVIS...");
-
-  requestController = new AbortController();
-  const timeout = setTimeout(() => requestController.abort(), 45000);
-
-  try {
-    const response = await fetch(API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        message,
-        language: ui.language.value
-      }),
-      signal: requestController.signal
+    await new Promise(resolve => {
+      setTimeout(resolve, CONFIG.typingDelay);
     });
 
-    let data;
+    createMessage(response, "jarvis");
+
+    elements.typing.hidden = true;
+
+    state.processing = false;
+
+    setReactorMode("idle");
+
+    if (
+      state.preferences.autoSpeak &&
+      !cleanCommand.toLowerCase().includes("stop speaking") &&
+      !cleanCommand.toLowerCase().includes("stop talking")
+    ) {
+      speak(response);
+    } else {
+      setStatus("AWAITING COMMAND");
+    }
+
+  }
+
+  /* ==========================================
+     TEXT COMMAND INPUT
+     ========================================== */
+
+  function sendCommand() {
+
+    const command = elements.input.value.trim();
+
+    if (!command) {
+      notify("Enter a command first.");
+      return;
+    }
+
+    if (state.processing) {
+      notify("Please wait for the current response.");
+      return;
+    }
+
+    elements.input.value = "";
+
+    processCommand(command);
+  }
+
+  /* ==========================================
+     SPEECH RECOGNITION
+     ========================================== */
+
+  function setupVoiceRecognition() {
+
+    const SpeechRecognition =
+      window.SpeechRecognition ||
+      window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+
+      state.recognitionSupported = false;
+
+      elements.voiceStatus.textContent =
+        "Not supported";
+
+      elements.microphone.disabled = true;
+      elements.microphone.title =
+        "Speech recognition is unavailable in this browser.";
+
+      return;
+    }
+
+    state.recognitionSupported = true;
+
+    const recognition = new SpeechRecognition();
+
+    state.recognition = recognition;
+
+    recognition.lang = CONFIG.language;
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    elements.voiceStatus.textContent = "Available";
+
+    recognition.onstart = () => {
+
+      state.listening = true;
+
+      setReactorMode("listening");
+
+      elements.microphone.classList.add("active");
+
+      setStatus("LISTENING TO COMMAND");
+
+      elements.systemStatus.textContent = "VOICE ACTIVE";
+
+    };
+
+    recognition.onresult = (event) => {
+
+      const result =
+        event.results[0][0].transcript;
+
+      elements.input.value = result;
+
+      processCommand(result);
+
+    };
+
+    recognition.onerror = (event) => {
+
+      console.warn("Recognition error:", event.error);
+
+      const errors = {
+        "not-allowed": "Microphone permission denied.",
+        "audio-capture": "No microphone was detected.",
+        "network": "Speech service network error.",
+        "no-speech": "No speech was detected."
+      };
+
+      notify(
+        errors[event.error] ||
+        "Voice recognition error: " + event.error
+      );
+
+    };
+
+    recognition.onend = () => {
+
+      state.listening = false;
+
+      setReactorMode("idle");
+
+      elements.microphone.classList.remove("active");
+
+      elements.systemStatus.textContent =
+        "SYSTEM ONLINE";
+
+      if (!state.processing) {
+        setStatus("AWAITING COMMAND");
+      }
+
+    };
+
+  }
+
+  function activateMicrophone() {
+
+    if (!state.recognitionSupported) {
+      notify("Speech recognition is not supported.");
+      return;
+    }
+
+    if (state.listening) {
+
+      state.recognition.stop();
+
+      return;
+    }
+
+    if (state.processing) {
+      notify("Wait until the current command finishes.");
+      return;
+    }
 
     try {
-      data = await response.json();
-    } catch {
-      throw new Error("The backend returned an invalid response.");
+
+      state.recognition.start();
+
+    } catch (error) {
+
+      console.error("Microphone activation:", error);
+
+      notify("Unable to start microphone. Please try again.");
+
     }
 
-    if (!response.ok) {
-      throw new Error(data.error || `Backend error (${response.status}).`);
-    }
+  }
 
-    const reply = String(data.reply || "").trim();
+  /* ==========================================
+     QUICK COMMAND BUTTONS
+     ========================================== */
 
-    if (!reply) {
-      throw new Error("JARVIS received an empty answer. Please try again.");
-    }
+  function setupQuickCommands() {
 
-    updateBubble(pendingBubble, reply);
-    ui.transcript.textContent = reply;
-
-    conversation.push(
-      { role: "user", content: message },
-      { role: "assistant", content: reply }
+    const buttons = document.querySelectorAll(
+      ".quick-card"
     );
 
-    if (conversation.length > 20) {
-      conversation.splice(0, conversation.length - 20);
-    }
+    buttons.forEach(button => {
 
-    setStatus("JARVIS READY", "Tap the microphone to ask another question");
-    speak(reply);
+      button.addEventListener("click", () => {
 
-  } catch (error) {
-    let messageText;
+        const command = button.dataset.command;
 
-    if (error.name === "AbortError") {
-      messageText = "The request took too long. Please try again.";
-    } else if (error instanceof TypeError) {
-      messageText =
-        "Couldn't connect to the backend. Check your internet connection and Cloudflare CORS settings.";
-    } else {
-      messageText = error.message || "Something went wrong.";
-    }
+        if (!command) return;
 
-    updateBubble(pendingBubble, messageText);
-    ui.transcript.textContent = messageText;
-    setStatus("CONNECTION ISSUE", "Check your connection and try again");
-    showToast(messageText);
-  } finally {
-    clearTimeout(timeout);
-    requestController = null;
-    isBusy = false;
-    ui.send.disabled = false;
-    ui.ready.textContent = "READY";
+        processCommand(command);
 
-    if (!document.body.classList.contains("speaking")) {
-      ui.voiceStatus.textContent = "READY";
-    }
-  }
-}
+      });
 
-/* Buttons */
-ui.send.addEventListener("click", () => {
-  sendMessage(ui.input.value);
-});
-
-ui.input.addEventListener("keydown", (event) => {
-  if (event.key === "Enter" && !event.isComposing) {
-    event.preventDefault();
-    sendMessage(ui.input.value);
-  }
-});
-
-ui.mic.addEventListener("click", startListening);
-ui.navMic.addEventListener("click", startListening);
-
-document.querySelectorAll(".quick-card").forEach((button) => {
-  button.addEventListener("click", () => {
-    const prompt = button.dataset.prompt;
-    if (prompt) sendMessage(prompt);
-  });
-});
-
-ui.clear.addEventListener("click", () => {
-  if (isBusy) {
-    showToast("Wait for the current response before clearing.");
-    return;
-  }
-
-  ui.messages.replaceChildren();
-  conversation.length = 0;
-  ui.transcript.textContent = "Conversation cleared.";
-  addMessage("assistant", "Hello! What would you like to ask me?");
-  showToast("Conversation cleared.");
-});
-
-$("settingsButton").addEventListener("click", () => {
-  showToast("Choose your preferred language from the language selector.");
-});
-
-$("modeButton").addEventListener("click", () => {
-  showToast("Hybrid mode: this web interface uses online AI responses.");
-});
-
-$("menuButton").addEventListener("click", () => {
-  $("chatSection").scrollIntoView({ behavior: "smooth", block: "start" });
-});
-
-document.querySelectorAll(".nav-item").forEach((button) => {
-  button.addEventListener("click", () => {
-    document.querySelectorAll(".nav-item").forEach((item) => {
-      item.classList.remove("active");
     });
 
-    button.classList.add("active");
+  }
 
-    const page = button.dataset.page;
+  /* ==========================================
+     SETTINGS
+     ========================================== */
 
-    if (page === "home") {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    } else if (page === "tools") {
-      document.querySelector(".quick-actions").scrollIntoView({
-        behavior: "smooth"
-      });
-    } else if (page === "history") {
-      $("chatSection").scrollIntoView({ behavior: "smooth" });
-      showToast("Chat history is stored only in this current page session.");
-    } else if (page === "profile") {
-      showToast("JARVIS Web Assistant · Browser-based interface");
-    }
-  });
-});
+  function openSettings() {
+    elements.settings.hidden = false;
 
-/* Initial state */
-setStatus("JARVIS READY", "Tap the microphone and ask me anything");
+    elements.settings.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest"
+    });
+  }
 
-if (!recognition) {
-  ui.instruction.textContent =
-    "Voice recognition unavailable in this browser. You can type below.";
-}
+  function closeSettings() {
+    elements.settings.hidden = true;
+  }
+
+  function saveSettings() {
+
+    state.preferences.voiceEnabled =
+      elements.voiceEnabled.checked;
+
+    state.preferences.autoSpeak =
+      elements.autoSpeak.checked;
+
+    state.preferences.soundEnabled =
+      elements.soundEnabled.checked;
+
+    const saved = savePreferences();
+
+    closeSettings();
+
+    notify(
+      saved
+        ? "JARVIS settings saved."
+        : "Settings applied for this session."
+    );
+
+  }
+
+  /* ==========================================
+     EVENT LISTENERS
+     ========================================== */
+
+  function setupEvents() {
+
+    elements.send.addEventListener(
+      "click",
+      sendCommand
+    );
+
+    elements.input.addEventListener(
+      "keydown",
+      event => {
+
+        if (event.key === "Enter") {
+          event.preventDefault();
+          sendCommand();
+        }
+
+      }
+    );
+
+    elements.microphone.addEventListener(
+      "click",
+      activateMicrophone
+    );
+
+    elements.speak.addEventListener(
+      "click",
+      () => speak(state.lastResponse)
+    );
+
+    elements.stop.addEventListener(
+      "click",
+      () => {
+
+        stopSpeech();
+
+        if (state.listening) {
+          state.recognition.stop();
+        }
+
+        notify("Voice activity stopped.");
+
+        setStatus("AWAITING COMMAND");
+
+      }
+    );
+
+    elements.clear.addEventListener(
+      "click",
+      clearChat
+    );
+
+    elements.settingsButton.addEventListener(
+      "click",
+      openSettings
+    );
+
+    elements.closeSettings.addEventListener(
+      "click",
+      closeSettings
+    );
+
+    elements.saveSettings.addEventListener(
+      "click",
+      saveSettings
+    );
+
+    document.addEventListener(
+      "visibilitychange",
+      () => {
+
+        if (document.hidden && state.listening) {
+          try {
+            state.recognition.stop();
+          } catch (error) {
+            console.warn(error);
+          }
+        }
+
+      }
+    );
+
+  }
+
+  /* ==========================================
+     INITIALIZATION
+     ========================================== */
+
+  function initialize() {
+
+    loadPreferences();
+
+    syncSettings();
+
+    updateClock();
+
+    setInterval(updateClock, 1000);
+
+    setupVoiceRecognition();
+
+    setupQuickCommands();
+
+    setupEvents();
+
+    elements.aiStatus.textContent =
+      "Backend not connected";
+
+    elements.systemStatus.textContent =
+      "SYSTEM ONLINE";
+
+    setStatus("AWAITING COMMAND");
+
+    console.log(
+      "JARVIS 2.0 initialized successfully."
+    );
+
+    console.log(
+      "AI backend: Awaiting secure integration."
+    );
+
+  }
+
+  /* ==========================================
+     PUBLIC METHODS
+     ========================================== */
+
+  return {
+    initialize,
+    processCommand,
+    speak,
+    stopSpeech,
+    clearChat
+  };
+
+})();
+
+/* ============================================
+   START APPLICATION
+   ============================================ */
+
+if (document.readyState === "loading") {
+
+  document.addEventListener(
+    "DOMContentLoaded",
+    JARVIS.initialize,
+    { once: true }
+  );
+
+} else {
+
+  JARVIS.initialize();
+
+      }
