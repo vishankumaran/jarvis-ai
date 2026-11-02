@@ -1,200 +1,391 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport"
-        content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#020605">
-  <meta name="description" content="JARVIS personal AI assistant">
-  <title>JARVIS — Your Personal AI</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#030814">
+  <meta name="description" content="JARVIS Personal Artificial Intelligence System">
+  <title>J.A.R.V.I.S. | Personal AI</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
-  <div class="ambient ambient-one"></div>
-  <div class="ambient ambient-two"></div>
 
-  <div class="app-shell">
+<div class="ambient ambient-one"></div>
+<div class="ambient ambient-two"></div>
+<div class="grid-background"></div>
 
-    <header class="topbar">
-      <button class="icon-button" id="menuButton"
-              aria-label="Open menu">☰</button>
+<header class="topbar">
 
-      <div class="brand">
-        <div class="brand-title">JARVIS<span class="brand-dot">.</span></div>
-        <div class="brand-subtitle">YOUR PERSONAL AI ASSISTANT</div>
-      </div>
-
-      <button class="mode-pill" id="modeButton">
-        <span>◉</span>
-        <span><small>AI MODE</small><strong>HYBRID</strong></span>
-      </button>
-
-      <button class="icon-button settings-button" id="settingsButton"
-              aria-label="Settings">⚙</button>
-    </header>
-
-    <main>
-      <section class="hero-panel">
-
-        <div class="side-column left-column">
-          <div class="info-card">
-            <span class="info-icon">♩</span>
-            <div><small>VOICE</small><strong id="voiceStatus">READY</strong></div>
-          </div>
-
-          <div class="info-card">
-            <span class="info-icon">⬟</span>
-            <div><small>SECURITY</small><strong>PROTECTED</strong></div>
-          </div>
-
-          <div class="info-card">
-            <span class="info-icon">☁</span>
-            <div><small>PRIVACY</small><strong>BACKEND</strong></div>
-          </div>
-        </div>
-
-        <div class="reactor-area">
-          <div class="reactor">
-            <div class="reactor-ring ring-one"></div>
-            <div class="reactor-ring ring-two"></div>
-            <div class="reactor-ring ring-three"></div>
-            <div class="reactor-ring ring-four"></div>
-
-            <div class="core">
-              <div class="core-eye eye-left"></div>
-              <div class="core-eye eye-right"></div>
-              <div class="core-mouth"></div>
-            </div>
-          </div>
-
-          <h1>JARVIS</h1>
-          <div class="always">— ALWAYS WITH YOU —</div>
-        </div>
-
-        <div class="side-column right-column">
-          <div class="detail-card">
-            <span class="detail-icon">◎</span>
-            <div>
-              <small>MULTI-LANGUAGE</small>
-              <p>English / தமிழ் / Thunglish</p>
-              <select id="languageSelect" aria-label="Response language">
-                <option value="auto">Automatic</option>
-                <option value="en-IN">English</option>
-                <option value="ta-IN">தமிழ்</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="detail-card devices-card">
-            <small>YOUR DEVICES</small>
-            <div class="device-row">
-              <span>▯<small>Mobile</small></span>
-              <span>▯<small>Tablet</small></span>
-              <span>▱<small>PC</small></span>
-            </div>
-            <p class="device-note">Web interface</p>
-          </div>
-        </div>
-      </section>
-
-      <section class="voice-section">
-        <div class="waveform" id="waveform" aria-hidden="true"></div>
-
-        <div class="listening-text" id="statusText" aria-live="polite">
-          JARVIS READY
-        </div>
-        <p class="instruction" id="instruction">
-          Tap the microphone and ask me anything
-        </p>
-
-        <button class="mic-button" id="micButton"
-                aria-label="Start voice input">
-          <span class="mic-halo"></span>
-          <svg viewBox="0 0 48 48" aria-hidden="true">
-            <rect x="18" y="5" width="12" height="25" rx="6"></rect>
-            <path d="M11 23a13 13 0 0 0 26 0"></path>
-            <path d="M24 36v7M17 43h14"></path>
-          </svg>
-        </button>
-
-        <div class="transcript" id="transcript">
-          Hello! I am JARVIS. How can I help you today?
-        </div>
-      </section>
-
-      <section class="chat-section" id="chatSection">
-        <div class="chat-heading">
-          <span>JARVIS CONVERSATION</span>
-          <button id="clearChatButton">CLEAR</button>
-        </div>
-        <div class="chat-messages" id="chatMessages" aria-live="polite">
-          <div class="message assistant-message">
-            <span class="message-label">JARVIS</span>
-            Hello! Tap the microphone or type a question below.
-          </div>
-        </div>
-      </section>
-
-      <section class="input-panel">
-        <input id="messageInput" type="text"
-               placeholder="Ask JARVIS anything..."
-               autocomplete="off" maxlength="4000">
-        <button id="sendButton" aria-label="Send message">➤</button>
-      </section>
-
-      <div class="quick-actions">
-        <button class="quick-card" data-prompt="Tell me something interesting">
-          <span>✧</span><strong>Ask Anything</strong><small>Explore answers</small>
-        </button>
-
-        <button class="quick-card" data-prompt="What can you help me do on my phone?">
-          <span>▯</span><strong>My Phone</strong><small>Device guidance</small>
-        </button>
-
-        <button class="quick-card" data-prompt="Help me understand my settings">
-          <span>⚙</span><strong>Settings</strong><small>Get guidance</small>
-        </button>
-
-        <button class="quick-card" data-prompt="Translate hello into Tamil">
-          <span>◎</span><strong>Translate</strong><small>Languages</small>
-        </button>
-
-        <button class="quick-card" data-prompt="Tell me your features">
-          <span>✳</span><strong>More</strong><small>Features</small>
-        </button>
-      </div>
-
-      <div class="ready-indicator">
-        <span></span> JARVIS <b id="readyText">READY</b> <span></span>
-      </div>
-    </main>
-
-    <nav class="bottom-nav" aria-label="Main navigation">
-      <button class="nav-item active" data-page="home">
-        <span>⌂</span>Home
-      </button>
-      <button class="nav-item" data-page="tools">
-        <span>◇</span>Tools
-      </button>
-      <button class="nav-main" id="navMicButton" aria-label="Talk to JARVIS">
-        <span>➤</span>
-      </button>
-      <button class="nav-item" data-page="history">
-        <span>◷</span>History
-      </button>
-      <button class="nav-item" data-page="profile">
-        <span>♙</span>Profile
-      </button>
-    </nav>
-
-    <footer>
-      JARVIS WEB ASSISTANT · AI RESPONSES REQUIRE AN INTERNET CONNECTION
-    </footer>
+  <div class="brand">
+    <div class="brand-logo">J</div>
+    <div class="brand-info">
+      <h1>J.A.R.V.I.S.</h1>
+      <span>PERSONAL INTELLIGENCE SYSTEM</span>
+    </div>
   </div>
 
-  <div class="toast" id="toast" role="status"></div>
+  <div class="header-center">
+    <span class="live-indicator"></span>
+    <span id="systemStatus">SYSTEM INITIALIZING</span>
+  </div>
 
-  <script src="script.js"></script>
+  <button class="menu-button" id="settingsButton" aria-label="Open settings">
+    ⚙
+  </button>
+
+</header>
+
+<main class="main-container">
+
+  <!-- WELCOME SECTION -->
+
+  <section class="welcome-section">
+
+    <div class="section-tag">
+      <span class="tag-line"></span>
+      ADVANCED ARTIFICIAL INTELLIGENCE
+      <span class="tag-line"></span>
+    </div>
+
+    <h2>
+      GOOD DAY,
+      <span>COMMANDER.</span>
+    </h2>
+
+    <p class="welcome-description">
+      Intelligence is ready. Awaiting your instructions.
+    </p>
+
+    <div class="time-container">
+      <div id="clock">00:00:00</div>
+      <div id="date">Loading date...</div>
+    </div>
+
+  </section>
+
+  <!-- AI CORE -->
+
+  <section class="reactor-section">
+
+    <div class="reactor-heading">
+      <span class="section-number">01</span>
+      <span>NEURAL PROCESSING CORE</span>
+    </div>
+
+    <div class="reactor-wrapper" id="reactor">
+
+      <div class="reactor-glow"></div>
+
+      <div class="outer-ring ring-a"></div>
+      <div class="outer-ring ring-b"></div>
+      <div class="outer-ring ring-c"></div>
+
+      <div class="orbit-path orbit-a">
+        <span class="orbit-point"></span>
+      </div>
+
+      <div class="orbit-path orbit-b">
+        <span class="orbit-point"></span>
+      </div>
+
+      <div class="orbit-path orbit-c">
+        <span class="orbit-point"></span>
+      </div>
+
+      <div class="reactor-inner">
+
+        <div class="reactor-scan"></div>
+
+        <div class="reactor-content">
+          <div class="reactor-symbol">J</div>
+          <div class="reactor-name">JARVIS</div>
+          <div class="reactor-state">AI CORE</div>
+        </div>
+
+      </div>
+
+      <div class="reactor-decoration decoration-one"></div>
+      <div class="reactor-decoration decoration-two"></div>
+
+    </div>
+
+    <div class="reactor-status">
+      <span class="status-pulse"></span>
+      <span id="coreStatus">AWAITING COMMAND</span>
+    </div>
+
+    <p class="reactor-caption">
+      VOICE INTERFACE · NEURAL SYSTEM · VERSION 2.0
+    </p>
+
+  </section>
+
+  <!-- MAIN COMMAND INTERFACE -->
+
+  <section class="command-section">
+
+    <div class="panel-header">
+      <div>
+        <span class="panel-label">COMMAND TERMINAL</span>
+        <h3>AI COMMUNICATION</h3>
+      </div>
+
+      <span class="terminal-status">LOCAL MODE</span>
+    </div>
+
+    <div class="chat-window" id="chatBox" aria-live="polite">
+
+      <div class="chat-message jarvis-message">
+        <div class="avatar">J</div>
+
+        <div class="message-content">
+          <span class="message-author">JARVIS SYSTEM</span>
+          <p>
+            Greetings, Commander. My interface is online.
+            I am currently operating in local demonstration mode.
+          </p>
+          <time>INITIAL MESSAGE</time>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="typing-indicator" id="typingIndicator" hidden>
+      <span></span><span></span><span></span>
+      <small>JARVIS IS PROCESSING</small>
+    </div>
+
+    <div class="input-container">
+
+      <div class="input-prefix">›</div>
+
+      <input
+        type="text"
+        id="userInput"
+        placeholder="Enter your command, Commander..."
+        maxlength="1000"
+        autocomplete="off"
+        aria-label="Enter command"
+      >
+
+      <button id="sendButton" class="send-button" aria-label="Send">
+        ➤
+      </button>
+
+    </div>
+
+    <div class="voice-controls">
+
+      <button id="micButton" class="action-button primary-action">
+        <span class="action-icon">◉</span>
+        <span>ACTIVATE VOICE</span>
+      </button>
+
+      <button id="speakButton" class="action-button">
+        <span class="action-icon">♫</span>
+        <span>SPEAK</span>
+      </button>
+
+      <button id="stopButton" class="action-button">
+        <span class="action-icon">■</span>
+        <span>STOP</span>
+      </button>
+
+      <button id="clearButton" class="action-button">
+        <span class="action-icon">⌫</span>
+        <span>CLEAR</span>
+      </button>
+
+    </div>
+
+  </section>
+
+  <!-- QUICK COMMANDS -->
+
+  <section class="quick-section">
+
+    <div class="section-heading">
+      <div>
+        <span class="section-number">02</span>
+        <h3>QUICK COMMANDS</h3>
+      </div>
+      <span>LOCAL COMMAND LIBRARY</span>
+    </div>
+
+    <div class="quick-grid">
+
+      <button class="quick-card" data-command="Hello JARVIS">
+        <span class="quick-icon">◉</span>
+        <strong>GREETING</strong>
+        <small>Initialize conversation</small>
+      </button>
+
+      <button class="quick-card" data-command="What time is it?">
+        <span class="quick-icon">◷</span>
+        <strong>TIME</strong>
+        <small>Current system time</small>
+      </button>
+
+      <button class="quick-card" data-command="What is today's date?">
+        <span class="quick-icon">▦</span>
+        <strong>DATE</strong>
+        <small>Current system date</small>
+      </button>
+
+      <button class="quick-card" data-command="System status">
+        <span class="quick-icon">⌘</span>
+        <strong>SYSTEM</strong>
+        <small>Interface diagnostics</small>
+      </button>
+
+      <button class="quick-card" data-command="Tell me about yourself">
+        <span class="quick-icon">✧</span>
+        <strong>IDENTITY</strong>
+        <small>JARVIS information</small>
+      </button>
+
+      <button class="quick-card" data-command="Help">
+        <span class="quick-icon">?</span>
+        <strong>HELP</strong>
+        <small>Available commands</small>
+      </button>
+
+    </div>
+
+  </section>
+
+  <!-- SYSTEM MODULES -->
+
+  <section class="modules-section">
+
+    <div class="section-heading">
+      <div>
+        <span class="section-number">03</span>
+        <h3>INTELLIGENCE MODULES</h3>
+      </div>
+      <span>MODULE MONITOR</span>
+    </div>
+
+    <div class="modules-grid">
+
+      <article class="module-card">
+        <div class="module-top">
+          <span class="module-symbol">✧</span>
+          <span class="module-light offline"></span>
+        </div>
+        <h4>AI BRAIN</h4>
+        <p id="aiModuleStatus">Not connected</p>
+        <span class="module-version">EXTERNAL API</span>
+      </article>
+
+      <article class="module-card">
+        <div class="module-top">
+          <span class="module-symbol">◉</span>
+          <span class="module-light"></span>
+        </div>
+        <h4>VOICE ENGINE</h4>
+        <p id="voiceModuleStatus">Checking support</p>
+        <span class="module-version">SPEECH API</span>
+      </article>
+
+      <article class="module-card">
+        <div class="module-top">
+          <span class="module-symbol">◈</span>
+          <span class="module-light"></span>
+        </div>
+        <h4>INTERFACE</h4>
+        <p>Operational</p>
+        <span class="module-version">FRONTEND</span>
+      </article>
+
+      <article class="module-card">
+        <div class="module-top">
+          <span class="module-symbol">⌘</span>
+          <span class="module-light offline"></span>
+        </div>
+        <h4>MEMORY ENGINE</h4>
+        <p>Not connected</p>
+        <span class="module-version">DATABASE</span>
+      </article>
+
+      <article class="module-card">
+        <div class="module-top">
+          <span class="module-symbol">⌕</span>
+          <span class="module-light offline"></span>
+        </div>
+        <h4>WEB INTELLIGENCE</h4>
+        <p>Not connected</p>
+        <span class="module-version">WEB SERVICES</span>
+      </article>
+
+      <article class="module-card">
+        <div class="module-top">
+          <span class="module-symbol">⟳</span>
+          <span class="module-light"></span>
+        </div>
+        <h4>COMMAND ENGINE</h4>
+        <p>Operational</p>
+        <span class="module-version">LOCAL ENGINE</span>
+      </article>
+
+    </div>
+
+  </section>
+
+  <!-- SETTINGS PANEL -->
+
+  <section class="settings-panel" id="settingsPanel" hidden>
+
+    <div class="panel-header">
+      <div>
+        <span class="panel-label">CONFIGURATION</span>
+        <h3>JARVIS SETTINGS</h3>
+      </div>
+
+      <button id="closeSettings" class="close-button">✕</button>
+    </div>
+
+    <label class="setting-row">
+      <span>Voice responses</span>
+      <input type="checkbox" id="voiceEnabled" checked>
+    </label>
+
+    <label class="setting-row">
+      <span>Automatic speech after command</span>
+      <input type="checkbox" id="autoSpeak" checked>
+    </label>
+
+    <label class="setting-row">
+      <span>Sound effects</span>
+      <input type="checkbox" id="soundEnabled">
+    </label>
+
+    <button id="saveSettings" class="save-button">
+      SAVE SETTINGS
+    </button>
+
+  </section>
+
+</main>
+
+<footer class="footer">
+
+  <div>J.A.R.V.I.S. PERSONAL AI</div>
+  <div>DESIGNED FOR THE FUTURE</div>
+  <div>VERSION 2.0.0</div>
+
+</footer>
+
+<div id="notification" class="notification" role="status"></div>
+
+<script src="script.js"></script>
+
 </body>
 </html>
